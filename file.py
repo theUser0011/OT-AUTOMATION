@@ -23,17 +23,24 @@ def initialize_driver():
     return driver
 
 def upload_to_fileio(filepath):
-    with open(filepath, "rb") as f:
-        response = requests.post("https://file.io", files={"file": f})
-        if response.ok:
-            data = response.json()
-            if data.get("success"):
-                return data["link"]
+    try:
+        with open(filepath, "rb") as f:
+            response = requests.post("https://file.io", files={"file": f})
+            print("file.io response status code:", response.status_code)
+            print("file.io raw response text:", response.text)  # debug
+
+            if response.ok:
+                data = response.json()
+                if data.get("success"):
+                    return data["link"]
+                else:
+                    print("Upload failed:", data)
             else:
-                print("Upload failed:", data)
-        else:
-            print("Failed to connect to file.io")
+                print("file.io request failed with status:", response.status_code)
+    except Exception as e:
+        print("Exception during upload:", e)
     return None
+
 
 # Initialize Chrome driver
 driver = initialize_driver()
