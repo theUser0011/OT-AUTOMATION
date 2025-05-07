@@ -22,22 +22,22 @@ def initialize_driver():
     driver = uc.Chrome(options=options, use_subprocess=False)
     return driver
 
-def upload_to_fileio(filepath):
-    try:
-        with open(filepath, "rb") as f:
-            response = requests.post("https://file.io", files={"file": f})
-            print("file.io response status code:", response.status_code)
-            print("file.io raw response text:", response.text)  # debug
+# def upload_to_fileio(filepath):
+#     try:
+#         with open(filepath, "rb") as f:
+#             response = requests.post("https://file.io", files={"file": f})
+#             print("file.io response status code:", response.status_code)
+#             print("file.io raw response text:", response.text)  # debug
 
-            if response.ok:
-                data = response.json()
-                if data:
-                    print(data)
-                else:
-                    print("Upload failed:", data)
-    except Exception as e:
-        print("Exception during upload:", e)
-    return None
+#             if response.ok:
+#                 data = response.json()
+#                 if data:
+#                     print(data)
+#                 else:
+#                     print("Upload failed:", data)
+#     except Exception as e:
+#         print("Exception during upload:", e)
+#     return None
 
 
 # Initialize Chrome driver
@@ -53,12 +53,12 @@ try:
     driver.save_screenshot(screenshot_path)
     print("Page loaded successfully, screenshot taken.")
 
-    # Upload to file.io
-    link = upload_to_fileio(screenshot_path)
-    if link:
-        print("🔗 Screenshot URL:", link)
-    else:
-        print("❌ Failed to upload screenshot.")
+    # # Upload to file.io
+    # link = upload_to_fileio(screenshot_path)
+    # if link:
+    #     print("🔗 Screenshot URL:", link)
+    # else:
+    #     print("❌ Failed to upload screenshot.")
 
     soup = BeautifulSoup(driver.page_source, "html.parser")
     stock_data = {"SYMBOL": stock_code}
