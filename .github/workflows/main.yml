@@ -1,0 +1,38 @@
+name: Take Screenshot
+
+on:
+  workflow_dispatch:
+
+jobs:
+  screenshot-job:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget xvfb libnss3 libxss1 libappindicator1 libindicator7 libasound2 fonts-liberation libgbm1 xdg-utils unzip
+        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
+        pip install selenium undetected-chromedriver pyvirtualdisplay mega.py
+        sudo apt-get install -y apt-utils python3-pip python3-setuptools python3-dev build-essential libffi-dev
+
+    - name: Install and update tenacity
+      run: |
+        pip install --upgrade tenacity
+
+    - name: Run screenshot script
+      run: |
+        Xvfb :99 -screen 0 1920x1080x16 &
+        export DISPLAY=:99
+        python file.py
+
+
