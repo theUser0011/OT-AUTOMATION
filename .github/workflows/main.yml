@@ -22,7 +22,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y xvfb
-        pip install undetected-chromedriver selenium mega.py
+        pip install undetected-chromedriver selenium mega.py bs4
 
     - name: Run Python script with virtual display
       run: |
