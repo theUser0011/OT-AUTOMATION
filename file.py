@@ -1,6 +1,6 @@
 import time
 import undetected_chromedriver as uc
-
+from mega import Mega
 def initialize_driver():
     options = uc.ChromeOptions()
     options.add_argument("--no-sandbox")
@@ -24,5 +24,9 @@ try:
     driver.get(url)
     time.sleep(5)  # Allow time for dynamic content to load
     driver.save_screenshot("screenshot.png")
+    mega = Mega()
+    m = mega.login("afg154004@gmail.com","megaMac02335!")
+    m.upload("screenshot.png")
+    
 finally:
     driver.quit()
