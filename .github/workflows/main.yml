@@ -1,11 +1,12 @@
-name: Take Screenshot
+name: Run Chrome GUI with UC
 
 on:
   push:
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
-  screenshot-job:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,30 +16,14 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.12'
+        python-version: "3.10"
 
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y wget xvfb libnss3 libxss1 fonts-liberation libgbm1 xdg-utils unzip python3-dev
-        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-        sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
-        pip install selenium undetected-chromedriver pyvirtualdisplay mega.py
+        sudo apt update
+        sudo apt install -y xvfb
+        pip install undetected-chromedriver selenium
 
-
-    - name: Install Python packages
+    - name: Run Python script with virtual display
       run: |
-        pip install selenium undetected-chromedriver mega.py --upgrade
-        pip install tenacity --upgrade
-
-    - name: Start virtual display and run screenshot script
-      run: |
-        Xvfb :99 -screen 0 1920x1080x16 &
-        export DISPLAY=:99
-        python file.py
-
-    # - name: Upload screenshot as artifact
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: nse-screenshot
-    #     path: screenshot.png
+        xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' python your_script.py
