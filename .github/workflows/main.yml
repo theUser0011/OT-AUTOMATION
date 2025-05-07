@@ -20,7 +20,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget xvfb libnss3 libxss1 fonts-liberation libgbm1 xdg-utils unzip python3-distutils
+        sudo apt-get install -y wget xvfb libnss3 libxss1 fonts-liberation libgbm1 xdg-utils unzip python3-dev
         wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
         sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
         pip install selenium undetected-chromedriver pyvirtualdisplay mega.py
