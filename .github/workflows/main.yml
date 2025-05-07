@@ -19,11 +19,11 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget xvfb libnss3 libxss1 libappindicator1 libindicator7 libasound2 fonts-liberation libgbm1 xdg-utils unzip
+        sudo apt-get install -y wget xvfb libnss3 libxss1 libasound2t64 fonts-liberation libgbm1 xdg-utils unzip libatk-bridge2.0-0 libgtk-3-0 libgconf-2-4 libxtst6
         wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
         sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get -f install -y
-        pip install selenium undetected-chromedriver pyvirtualdisplay mega.py
-        sudo apt-get install -y apt-utils python3-pip python3-setuptools python3-dev build-essential libffi-dev
+        pip install selenium undetected-chromedriver mega.py
+        # sudo apt-get install -y apt-utils python3-pip python3-setuptools python3-dev build-essential libffi-dev
 
     - name: Install and update tenacity
       run: |
