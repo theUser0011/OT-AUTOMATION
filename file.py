@@ -1,11 +1,7 @@
 import time
+import requests
 import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
-import os
 
 # Set the stock code here
 stock_code = "TCS"  # Replace this with any stock symbol you want to search
@@ -26,31 +22,22 @@ def initialize_driver():
     driver = uc.Chrome(options=options, use_subprocess=False)
     return driver
 
-def upload_screenshot(driver, screenshot_path):
+def upload_to_fileio(filepath):
     try:
-        # Open file.io upload page or any other website with file upload
-        driver.get("https://file.io/")
-        
-        # Wait for the file input element to be clickable and then send the file path
-        file_input = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.NAME, "file"))
-        )
-        
-        # Upload the file (path of screenshot)
-        file_input.send_keys(screenshot_path)
-        
-        # Wait for the response link to appear after upload
-        WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "file-link"))
-        )
-        
-        # Get the URL from the response
-        link = driver.find_element(By.CLASS_NAME, "file-link").text
-        return link
-    
+        with open(filepath, "rb") as f:
+            response = requests.post("https://file.io", files={"file": f})
+            print("file.io response status code:", response.status_code)
+            print("file.io raw response text:", response.text)  # debug
+
+            if response.ok:
+                data = response.json()
+                if data:
+                    print(data)
+                else:
+                    print("Upload failed:", data)
     except Exception as e:
-        print("Error during upload:", e)
-        return None
+        print("Exception during upload:", e)
+    return None
 
 
 # Initialize Chrome driver
@@ -66,8 +53,8 @@ try:
     driver.save_screenshot(screenshot_path)
     print("Page loaded successfully, screenshot taken.")
 
-    # Upload the screenshot using the WebDriver
-    link = upload_screenshot(driver, screenshot_path)
+    # Upload to file.io
+    link = upload_to_fileio(screenshot_path)
     if link:
         print("🔗 Screenshot URL:", link)
     else:
