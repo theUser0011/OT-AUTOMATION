@@ -35,7 +35,7 @@ client = None
 try:
     # Initialize driver
     driver = initialize_driver()
-    url = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050"
+    url = "https://www.nseindia.com/market-data/live-equity-market"
     driver.get(url)
     time.sleep(3)
 
