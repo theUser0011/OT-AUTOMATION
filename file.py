@@ -1,13 +1,15 @@
-import time
+import time,os
 import requests
 import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
+from pymongo import MongoClient
 
-# Set the stock code here
-stock_code = "TCS"  # Replace this with any stock symbol you want to search
-
-def parse_stock_text(text):
-    return {"raw_text": text}
+# MongoDB Atlas connection URL
+MONGO_ATLAS_URL = os.getenv("MONGO_URL")
+  # 👈 Replace with your actual MongoDB Atlas connection string
+DB_NAME = "images"
+COLLECTION_NAME = "image_data"
+screenshot_path = "screenshot.png"
 
 def initialize_driver():
     options = uc.ChromeOptions()
@@ -22,56 +24,41 @@ def initialize_driver():
     driver = uc.Chrome(options=options, use_subprocess=False)
     return driver
 
-# def upload_to_fileio(filepath):
-#     try:
-#         with open(filepath, "rb") as f:
-#             response = requests.post("https://file.io", files={"file": f})
-#             print("file.io response status code:", response.status_code)
-#             print("file.io raw response text:", response.text)  # debug
-
-#             if response.ok:
-#                 data = response.json()
-#                 if data:
-#                     print(data)
-#                 else:
-#                     print("Upload failed:", data)
-#     except Exception as e:
-#         print("Exception during upload:", e)
-#     return None
-
-
-# Initialize Chrome driver
-driver = initialize_driver()
+driver = None
+client = None
 
 try:
-    query = f"{stock_code} stock price"
-    url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
+    # Initialize driver
+    driver = initialize_driver()
+    url = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050"
     driver.get(url)
-    time.sleep(5)
+    time.sleep(3)
 
-    screenshot_path = "screenshot.png"
+    # Save screenshot
     driver.save_screenshot(screenshot_path)
-    print("Page loaded successfully, screenshot taken.")
+    print("📸 Screenshot saved successfully.")
 
-    # # Upload to file.io
-    # link = upload_to_fileio(screenshot_path)
-    # if link:
-    #     print("🔗 Screenshot URL:", link)
-    # else:
-    #     print("❌ Failed to upload screenshot.")
+    # Connect to MongoDB
+    client = MongoClient(MONGO_ATLAS_URL)
+    db = client[DB_NAME]
+    collection = db[COLLECTION_NAME]
 
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    stock_data = {"SYMBOL": stock_code}
-    price_div = soup.find("div", attrs={"data-attrid": "Price"})
+    # Clear existing data
+    delete_result = collection.delete_many({})
+    print(f"🗑️ Cleared {delete_result.deleted_count} existing document(s).")
 
-    if price_div:
-        stock_data['code'] = stock_code
-        stock_data['text'] = price_div.text.strip()
-        parsed = parse_stock_text(price_div.text.strip())
-        print("Parsed Stock Data:", parsed)
-    else:
-        print("⚠️ Warning: Stock price div not found.")
+    # Insert new image data
+    document = {"screenshot_path": screenshot_path, "timestamp": time.time()}
+    collection.insert_one(document)
+    print("✅ Screenshot path saved to MongoDB.")
+
 except Exception as e:
     print("❌ Error:", e)
+
 finally:
-    driver.quit()
+    if driver:
+        driver.quit()
+        print("🛑 Chrome driver closed.")
+    if client:
+        client.close()
+        print("🔌 MongoDB connection closed.")
