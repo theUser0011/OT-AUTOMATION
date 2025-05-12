@@ -1,15 +1,19 @@
-import time,os
+import time
+import os
 import requests
 import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
+from selenium.webdriver.chrome.service import Service
 
 # MongoDB Atlas connection URL
-MONGO_ATLAS_URL = os.getenv("MONGO_URL")
-  # 👈 Replace with your actual MongoDB Atlas connection string
+MONGO_ATLAS_URL = os.getenv("MONGO_URL")  # 👈 Make sure this is set in your environment
 DB_NAME = "images"
 COLLECTION_NAME = "image_data"
 screenshot_path = "screenshot.png"
+
+# Path to your locally downloaded ChromeDriver (Linux binary)
+CHROMEDRIVER_PATH = "chromedriver"  # 👈 Make sure this path is correct and executable
 
 def initialize_driver():
     options = uc.ChromeOptions()
@@ -21,7 +25,9 @@ def initialize_driver():
     options.add_argument("--window-size=1920,1080")
     # options.add_argument("--headless=new")
 
-    driver = uc.Chrome(options=options, use_subprocess=False)
+    # Use ChromeDriver from specified path
+    service = Service(executable_path=CHROMEDRIVER_PATH)
+    driver = uc.Chrome(service=service, options=options, use_subprocess=False)
     return driver
 
 driver = None
