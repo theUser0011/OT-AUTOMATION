@@ -25,5 +25,7 @@ jobs:
         pip install undetected-chromedriver selenium mega.py bs4 requests pymongo
 
     - name: Run Python script with virtual display
+      env:
+        MONGO_URL: ${{ secrets.MONGO_URL }}
       run: |
         xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' python file.py
