@@ -1,29 +1,29 @@
-# name: Run Chrome GUI with UC
+name: Run Chrome GUI with UC
 
-# on:
-#   push:
-#     branches:
-#       - main
+on:
+  push:
+    branches:
+      - main
 
-# jobs:
-#   run-script:
-#     runs-on: ubuntu-latest
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
 
-#     steps:
-#     - name: Checkout repo
-#       uses: actions/checkout@v3
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-#     - name: Set up Python
-#       uses: actions/setup-python@v4
-#       with:
-#         python-version: "3.10"
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
 
-#     - name: Install dependencies
-#       run: |
-#         sudo apt update
-#         sudo apt install -y xvfb
-#         pip install undetected-chromedriver selenium mega.py bs4 requests
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y xvfb
+        pip install undetected-chromedriver selenium mega.py bs4 requests pymongo
 
-#     - name: Run Python script with virtual display
-#       run: |
-#         xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' python file.py
+    - name: Run Python script with virtual display
+      run: |
+        xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' python file.py
