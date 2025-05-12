@@ -35,9 +35,9 @@ client = None
 try:
     # Initialize driver
     driver = initialize_driver()
-    url = "https://www.nseindia.com/market-data/live-equity-market"
+    url = 'https://www.moneycontrol.com/stocks/marketstats/indexcomp.php?optex=NSE&opttopic=indexcomp&index=9'
     driver.get(url)
-    time.sleep(3)
+    time.sleep(5)
 
     # Save screenshot to file
     driver.save_screenshot(screenshot_path)
