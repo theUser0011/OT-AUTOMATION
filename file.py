@@ -5,16 +5,23 @@ import undetected_chromedriver as uc
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 from selenium.webdriver.chrome.service import Service
-from bson import Binary  # 👈 For storing binary data
+from selenium.webdriver.common.by import By
+from bson import Binary
 
 # MongoDB Atlas connection URL
 MONGO_ATLAS_URL = os.getenv("MONGO_URL")
 if not MONGO_ATLAS_URL:
     raise ValueError("MONGO_URL not set in environment variables.")
 
+# MongoDB config
 DB_NAME = "images"
-COLLECTION_NAME = "image_data"
+COLLECTION_NAME_IMAGE = "image_data"
+COLLECTION_NAME_TABLE = "market_table_data"
+
+# Screenshot file path
 screenshot_path = "screenshot.png"
+
+# Path to ChromeDriver
 CHROMEDRIVER_PATH = "chromedriver"
 
 def initialize_driver():
@@ -43,27 +50,58 @@ try:
     driver.save_screenshot(screenshot_path)
     print("📸 Screenshot saved successfully.")
 
-    # Read image as binary
+    # Read screenshot as binary
     with open(screenshot_path, "rb") as f:
         binary_data = Binary(f.read())
 
     # Connect to MongoDB
     client = MongoClient(MONGO_ATLAS_URL)
     db = client[DB_NAME]
-    collection = db[COLLECTION_NAME]
 
-    # Clear existing data
-    delete_result = collection.delete_many({})
-    print(f"🗑️ Cleared {delete_result.deleted_count} existing document(s).")
+    # Save image to image_data collection
+    collection_img = db[COLLECTION_NAME_IMAGE]
+    delete_result_img = collection_img.delete_many({})
+    print(f"🗑️ Cleared {delete_result_img.deleted_count} image document(s).")
 
-    # Insert binary image data
-    document = {
+    img_doc = {
         "image_data": binary_data,
         "timestamp": time.time(),
         "description": "NSE screenshot"
     }
-    collection.insert_one(document)
+    collection_img.insert_one(img_doc)
     print("✅ Binary screenshot saved to MongoDB.")
+
+    # Get 2nd table from page
+    tables = driver.find_elements(By.TAG_NAME, "table")
+    if len(tables) > 1:
+        html_table = tables[1].get_attribute("outerHTML")
+        soup = BeautifulSoup(html_table, "html.parser")
+        rows = soup.find_all("tr")
+
+        table_data = []
+        headers = [th.get_text(strip=True) for th in rows[0].find_all("th")]
+
+        for row in rows[1:]:
+            cols = row.find_all("td")
+            if len(cols) == len(headers):
+                row_data = {headers[i]: cols[i].get_text(strip=True) for i in range(len(headers))}
+                table_data.append(row_data)
+
+        # Save table data
+        collection_table = db[COLLECTION_NAME_TABLE]
+        delete_result_table = collection_table.delete_many({})
+        print(f"🗑️ Cleared {delete_result_table.deleted_count} table document(s).")
+
+        table_doc = {
+            "table_data": table_data,
+            "timestamp": time.time(),
+            "source_url": url,
+            "description": "NSE 2nd table from Moneycontrol"
+        }
+        collection_table.insert_one(table_doc)
+        print("📊 Table data saved to MongoDB.")
+    else:
+        print("⚠️ Less than 2 tables found on the page.")
 
 except Exception as e:
     print("❌ Error:", e)
