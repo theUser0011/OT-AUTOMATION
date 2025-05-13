@@ -9,16 +9,18 @@ from pymongo import MongoClient
 
 
 MONGO_URL = os.getenv("MONGO_URL")
+
 client = None
 
 
 os.makedirs("json",exist_ok=True)
 
 # Path to ChromeDriver
-chromedriver_path = r"chromedriver"
+chromedriver_path = r"D:\files\Drives\chromedriver-win64\chromedriver-win64\chromedriver.exe"
 
 # Configure Chrome
 options = Options()
+# options.add_argument("--incognito")
 
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1920x1080")
@@ -82,8 +84,7 @@ def save_to_mongodb(index_name, index_json_data):
             print("⚠️ No data to insert.")
     except Exception as e:
         print(f"❌ MongoDB insertion failed for '{index_name}': {e}")
-    finally:
-        client.close()
+
 
 def extract_and_save_data(driver, tab_index):
     driver.switch_to.window(driver.window_handles[tab_index])
