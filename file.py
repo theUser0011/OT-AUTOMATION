@@ -131,20 +131,16 @@ def extract_and_save_data(driver, tab_index):
         print("Data is empty : ",data)
 
 def open_tabs_and_extract_loop(url_lst, num_of_tab):
-    
-    
-    # Check if current time is within market hours
     if not is_market_hours():
         print("⏳ Market is closed. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
-        return    
-    
+        return
+
     driver = driver_initialize()
     if not driver:
-        return
+        raise Exception("❌ Failed to initialize WebDriver.")
 
     try:
         print("🚀 Opening tabs...")
-        # Open all URLs in separate tabs
         for i in range(num_of_tab):
             if i == 0:
                 driver.get(url_lst[0])
@@ -154,26 +150,44 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
                 driver.get(url_lst[i])
 
         print("🌀 Starting data extraction loop (Press Ctrl+C to stop)...")
-        
         while True:
             for i in range(num_of_tab):
-                extract_and_save_data(driver,  i)
+                extract_and_save_data(driver, i)
             print("⏳ Waiting before next round...\n")
-            time.sleep(3)  # Adjust frequency here
+            time.sleep(3)
 
     except KeyboardInterrupt:
         print("\n🛑 Stopped by user.")
     except Exception as e:
-        print("❌ Error during processing:", e)
+        print(f"❌ Error during processing: {e}")
+        raise  # Re-raise the exception to handle in outer retry loop
     finally:
         driver.quit()
         print("🚪 Browser closed.")
 
 if __name__ == "__main__":
+    import json
+    import time
+
     with open("values.json", encoding='utf-8') as f:
         url_data = json.load(f)
+
     url_data = [obj['href'] for obj in url_data]
-    num_of_tab = 5  # ✅ Change this number to open more or fewer tabs
+    num_of_tab = 5
     url_data = url_data[:num_of_tab]
-    
-    open_tabs_and_extract_loop(url_lst=url_data, num_of_tab=num_of_tab)
+
+    max_attempts = 3
+    attempt = 0
+
+    while attempt < max_attempts:
+        try:
+            print(f"\n🔁 Attempt {attempt + 1} of {max_attempts}")
+            open_tabs_and_extract_loop(url_lst=url_data, num_of_tab=num_of_tab)
+            break  # Exit loop if successful
+        except Exception as e:
+            attempt += 1
+            if attempt < max_attempts:
+                print(f"🔁 Retrying in 5 seconds due to error: {e}")
+                time.sleep(5)
+            else:
+                print("❌ All retry attempts failed. Exiting.")
