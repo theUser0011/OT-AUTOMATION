@@ -73,8 +73,8 @@ def save_to_mongodb(index_name, index_json_data):
         db = client["OT_TRADING"]
         collection = db[index_name]
 
-        # Optional: clear old data if you want fresh data every time
-        collection.delete_many({})
+        # # Optional: clear old data if you want fresh data every time
+        # collection.delete_many({})
 
         # Insert new data
         if index_json_data:
