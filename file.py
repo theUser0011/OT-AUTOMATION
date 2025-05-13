@@ -78,7 +78,7 @@ def save_to_mongodb(index_name, index_json_data):
 
         # Insert new data
         if index_json_data:
-            collection.insert_many(index_json_data)
+            collection.insert_one(index_json_data)
             print(f"✅ Data inserted into MongoDB collection '{index_name}'")
         else:
             print("⚠️ No data to insert.")
@@ -115,8 +115,7 @@ def extract_and_save_data(driver, tab_index):
                 "%Chg": cols[4].get_text(strip=True),
                 "Mkt Cap(Rs cr)": cols[5].get_text(strip=True)
             }
-            data.append(item
-                        )
+            data.append(item)
     current_time = get_current_time()
             
     stock_data = {
@@ -124,10 +123,12 @@ def extract_and_save_data(driver, tab_index):
                 "live_data":data,
                 "time_stamp":current_time
             }
+    
 
-
-    save_to_mongodb(index_name, stock_data)
-
+    if len(data)>0:
+        save_to_mongodb(index_name, stock_data)
+    else:
+        print("Data is empty : ",data)
 
 def open_tabs_and_extract_loop(url_lst, num_of_tab):
     
@@ -151,7 +152,6 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
                 driver.execute_script("window.open('');")
                 driver.switch_to.window(driver.window_handles[i])
                 driver.get(url_lst[i])
-            time.sleep(2)
 
         print("🌀 Starting data extraction loop (Press Ctrl+C to stop)...")
         
