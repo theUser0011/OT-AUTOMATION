@@ -79,7 +79,7 @@ def save_to_mongodb(index_name, index_json_data):
         # Insert new data
         if index_json_data:
             collection.insert_one(index_json_data)
-            print(f"✅ Data inserted into MongoDB collection '{index_name}'")
+            # print(f"✅ Data inserted into MongoDB collection '{index_name}'")
         else:
             print("⚠️ No data to insert.")
     except Exception as e:
@@ -155,7 +155,7 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
  
             for i in range(num_of_tab):
                 extract_and_save_data(driver, i)
-            print("⏳ Waiting before next round...\n")
+            # print("⏳ Waiting before next round...\n")
             
             if not is_market_hours():
                 print("⏳ Market is closed. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
@@ -186,12 +186,10 @@ if __name__ == "__main__":
 
     max_attempts = 3
     attempt = 0
-    
- 
-    
+        
     while attempt < max_attempts:
         if not is_market_hours():
-            print(f"⏳ Market is closed {get_current_time()}. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
+            # print(f"⏳ Market is closed {get_current_time()}. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
             break
         
         try:
@@ -206,4 +204,3 @@ if __name__ == "__main__":
                 time.sleep(5)
             else:
                 print("❌ All retry attempts failed. Exiting.")
-
