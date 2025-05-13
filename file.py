@@ -131,11 +131,12 @@ def extract_and_save_data(driver, tab_index):
         print("Data is empty : ",data)
 
 def open_tabs_and_extract_loop(url_lst, num_of_tab):
-    if not is_market_hours():
-        print("⏳ Market is closed. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
-        return
+
 
     driver = driver_initialize()
+    
+    run_flag = True
+    
     if not driver:
         raise Exception("❌ Failed to initialize WebDriver.")
 
@@ -150,11 +151,17 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
                 driver.get(url_lst[i])
 
         print("🌀 Starting data extraction loop (Press Ctrl+C to stop)...")
-        while True:
+        while run_flag:
+ 
             for i in range(num_of_tab):
                 extract_and_save_data(driver, i)
             print("⏳ Waiting before next round...\n")
-            time.sleep(3)
+            
+            if not is_market_hours():
+                print("⏳ Market is closed. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
+                run_flag = False
+                
+            time.sleep(1)
 
     except KeyboardInterrupt:
         print("\n🛑 Stopped by user.")
@@ -165,9 +172,10 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
         driver.quit()
         print("🚪 Browser closed.")
 
+
+
 if __name__ == "__main__":
-    import json
-    import time
+
 
     with open("values.json", encoding='utf-8') as f:
         url_data = json.load(f)
@@ -178,12 +186,19 @@ if __name__ == "__main__":
 
     max_attempts = 3
     attempt = 0
-
+    
+ 
+    
     while attempt < max_attempts:
+        if not is_market_hours():
+            print("⏳ Market is closed. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
+            break
+        
         try:
             print(f"\n🔁 Attempt {attempt + 1} of {max_attempts}")
             open_tabs_and_extract_loop(url_lst=url_data, num_of_tab=num_of_tab)
             break  # Exit loop if successful
+        
         except Exception as e:
             attempt += 1
             if attempt < max_attempts:
@@ -191,3 +206,4 @@ if __name__ == "__main__":
                 time.sleep(5)
             else:
                 print("❌ All retry attempts failed. Exiting.")
+
