@@ -100,9 +100,10 @@ def extract_and_save_data(driver, tab_index):
     table = tables[1]
     rows = table.find_all("tr")[1:]  # Skip header
     
-    current_time = get_current_time()
     
+    stock_data = None
     data = []
+
     for row in rows:
         cols = row.find_all("td")
         if len(cols) >= 6:
@@ -114,20 +115,18 @@ def extract_and_save_data(driver, tab_index):
                 "%Chg": cols[4].get_text(strip=True),
                 "Mkt Cap(Rs cr)": cols[5].get_text(strip=True)
             }
-            stock_data = {
+            data.append(item
+                        )
+    current_time = get_current_time()
+            
+    stock_data = {
                 "index_name":index_name,
-                "live_data":item,
+                "live_data":data,
                 "time_stamp":current_time
             }
-            data.append(stock_data)
 
-    # filename = f"./json/{index_name}.json"
-    # with open(filename, "w", encoding="utf-8") as f:
-    #     json.dump(data, f, indent=2)
-    # print(f"✅ Data saved to {filename}")
-        # Instead of saving to JSON file
-        
-    save_to_mongodb(index_name, data)
+
+    save_to_mongodb(index_name, stock_data)
 
 
 def open_tabs_and_extract_loop(url_lst, num_of_tab):
@@ -174,7 +173,7 @@ if __name__ == "__main__":
     with open("values.json", encoding='utf-8') as f:
         url_data = json.load(f)
     url_data = [obj['href'] for obj in url_data]
-    num_of_tab = 2  # ✅ Change this number to open more or fewer tabs
+    num_of_tab = 5  # ✅ Change this number to open more or fewer tabs
     url_data = url_data[:num_of_tab]
     
     open_tabs_and_extract_loop(url_lst=url_data, num_of_tab=num_of_tab)
