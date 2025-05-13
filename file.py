@@ -16,7 +16,7 @@ client = None
 os.makedirs("json",exist_ok=True)
 
 # Path to ChromeDriver
-chromedriver_path = r"chromedriver.exe"
+chromedriver_path = r"chromedriver"
 
 # Configure Chrome
 options = Options()
