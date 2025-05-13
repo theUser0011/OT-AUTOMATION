@@ -191,7 +191,7 @@ if __name__ == "__main__":
     
     while attempt < max_attempts:
         if not is_market_hours():
-            print("⏳ Market is closed. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
+            print(f"⏳ Market is closed {get_current_time()}. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
             break
         
         try:
