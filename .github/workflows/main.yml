@@ -7,7 +7,7 @@ on:
 
   schedule:
     # First run: 9:20 AM IST (3:50 AM UTC)
-    - cron: "50 3 * * *"  # Runs daily at 9:20 AM IST
+    - cron: "50 2 * * *"  # Runs daily at 9:20 AM IST
 
 
 jobs:
@@ -28,9 +28,11 @@ jobs:
         sudo apt update
         sudo apt install -y xvfb
         pip install undetected-chromedriver selenium mega.py bs4 requests pymongo pytz
-
+        
     - name: Run Python script with virtual display
       env:
         MONGO_URL: ${{ secrets.MONGO_URL }}
+        M_TOKEN: ${{ secrets.M_TOKEN }}
+
       run: |
         xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' python file.py
