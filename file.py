@@ -6,9 +6,11 @@ from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 from datetime import datetime
 from pymongo import MongoClient
-
+from concurrent.futures import ThreadPoolExecutor
+from mega import Mega
 
 MONGO_URL = os.getenv("MONGO_URL")
+M_TOKEN = os.getenv("M_TOKEN")
 
 client = None
 
@@ -28,6 +30,8 @@ options.add_argument("--disable-notifications")
 options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
 options.add_experimental_option("useAutomationExtension", False)
+
+
 
 
 
@@ -53,6 +57,11 @@ def get_current_time(default_value=0):
     
     current_time = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
     return current_time    
+# --- Check if current IST time is after 3:35 PM ---
+def is_after_3_35_pm():
+    now = get_current_time(default_value=1)  # Get datetime object
+    target_time = time(15, 35)  # 3:35 PM
+    return now.time() > target_time
 
 def is_market_hours():
     now = get_current_time(1)
@@ -61,6 +70,43 @@ def is_market_hours():
     is_weekday = now.weekday() < 5  # 0-4 = Monday to Friday
     return is_weekday and market_open <= now <= market_close
 
+def save_file_to_mega(m, file_name):
+    try:
+        m.upload(file_name)
+        print(f"Uploaded {file_name} to MEGA.")
+    except Exception as e:
+        print("Error failed to upload:", e)
+
+def save_collection_as_json():
+    global client
+    try:
+        if client is None:
+            client = MongoClient(MONGO_URL)
+
+        db = client["OT_TRADING"]
+        collection_names = db.list_collection_names()
+
+        mega = Mega()
+        keys = M_TOKEN.split("_")
+        m = mega.login(keys[0], keys[1])
+
+        collection_files = []
+        time_stamp = get_current_time()
+        for name in collection_names:
+            data = list(db[name].find({}, {'_id': False}))  # Exclude _id
+            file_name = f"{name}_{time_stamp}.json"
+            with open(file_name, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            collection_files.append(file_name)
+
+        for collect_file in collection_files:
+            save_file_to_mega(m, collect_file)
+            os.remove(collect_file)  # Optional: delete file after upload
+
+    except Exception as e:
+        print("Error:", e)
+
+
 # MongoDB Save Function
 def save_to_mongodb(index_name, index_json_data):
     global client
@@ -68,14 +114,10 @@ def save_to_mongodb(index_name, index_json_data):
         
         if client is None:
             client = MongoClient(MONGO_URL)
-            
-            
+                                    
         db = client["OT_TRADING"]
         collection = db[index_name]
-
-        # # Optional: clear old data if you want fresh data every time
-        # collection.delete_many({})
-
+        
         # Insert new data
         if index_json_data:
             collection.insert_one(index_json_data)
@@ -160,6 +202,12 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
             if not is_market_hours():
                 print("⏳ Market is closed. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
                 run_flag = False
+            # Example usage
+            if is_after_3_35_pm():
+                print("Current time is after 3:35 PM IST.")
+                run_flag = False                
+            else:
+                print("Current time is before 3:35 PM IST.")
                 
             time.sleep(1)
 
@@ -174,33 +222,41 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
 
 
 
-if __name__ == "__main__":
+def runner(instance_id, urls, max_attempts=3):
+    attempt = 0
+    while attempt < max_attempts:
+        if not is_market_hours():
+            print(f"[Instance {instance_id}] Market is closed. Stopping.")
+            break
+        try:
+            print(f"\n🔁 Instance {instance_id} - Attempt {attempt + 1} of {max_attempts}")
+            open_tabs_and_extract_loop(url_lst=urls, num_of_tab=len(urls))
+            break
+        except Exception as e:
+            attempt += 1
+            if attempt < max_attempts:
+                print(f"[Instance {instance_id}] Retrying in 5 seconds due to error: {e}")
+                time.sleep(5)
+            else:
+                print(f"[Instance {instance_id}] ❌ All retry attempts failed.")
 
+if __name__ == "__main__":
 
     with open("values.json", encoding='utf-8') as f:
         url_data = json.load(f)
 
     url_data = [obj['href'] for obj in url_data]
-    num_of_tab = 5
-    url_data = url_data[:num_of_tab]
 
-    max_attempts = 3
-    attempt = 0
-        
-    while attempt < max_attempts:
-        if not is_market_hours():
-            # print(f"⏳ Market is closed {get_current_time()}. Script will not run outside 9:15 AM to 3:40 PM IST (Mon–Fri).")
-            break
-        
-        try:
-            print(f"\n🔁 Attempt {attempt + 1} of {max_attempts}")
-            open_tabs_and_extract_loop(url_lst=url_data, num_of_tab=num_of_tab)
-            break  # Exit loop if successful
-        
-        except Exception as e:
-            attempt += 1
-            if attempt < max_attempts:
-                print(f"🔁 Retrying in 5 seconds due to error: {e}")
-                time.sleep(5)
-            else:
-                print("❌ All retry attempts failed. Exiting.")
+    num_of_instances = 2
+    tabs_per_instance = 5
+    total_required = num_of_instances * tabs_per_instance
+
+    if len(url_data) < total_required:
+        raise ValueError("Not enough URLs for the number of instances and tabs requested.")
+
+    with ThreadPoolExecutor(max_workers=num_of_instances) as executor:
+        for i in range(num_of_instances):
+            start = i * tabs_per_instance
+            end = start + tabs_per_instance
+            urls_for_instance = url_data[start:end]
+            executor.submit(runner, i + 1, urls_for_instance)
