@@ -18,6 +18,8 @@ os.makedirs("json", exist_ok=True)
 
 chromedriver_path = r"chromedriver"
 
+error_occured_count = 0
+
 options = Options()
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1920x1080")
@@ -28,12 +30,18 @@ options.add_experimental_option("useAutomationExtension", False)
 
 
 def report_error_to_server(error_message):
+    global error_occured_count
+    error_occured_count += 1
+
     try:
         url = 'https://pass-actions-status.vercel.app/report-error'
         headers = {'Content-Type': 'application/json'}
-        data = {'error': str(error_message)}
+        data = {
+            'error': str(error_message),
+            'count': error_occured_count  # Include the count here
+        }
         response = requests.post(url, headers=headers, json=data)
-        print("📡 Error reported:", response.status_code, response.text)
+        # print("📡 Error reported:", response.status_code, response.text)
     except Exception as report_ex:
         print("⚠️ Failed to report error:", report_ex)
 
@@ -201,10 +209,12 @@ def open_tabs_and_extract_loop(url_lst, num_of_tab):
                 run_flag = False
 
             if is_after_3_35_pm():
-                print("Current time is after 3:35 PM IST.")
+                # print("Current time is after 3:35 PM IST.")
                 run_flag = False
-            else:
-                print("Current time is before 3:35 PM IST.")
+                save_collection_as_json()
+                
+            # else:
+            #     print("Current time is before 3:35 PM IST.")
 
             time.sleep(1)
 
@@ -228,6 +238,7 @@ def runner(instance_id, urls, max_attempts=3):
         try:
             print(f"\n🔁 Instance {instance_id} - Attempt {attempt + 1} of {max_attempts}")
             open_tabs_and_extract_loop(url_lst=urls, num_of_tab=len(urls))
+            attempt = 0
             break
         except Exception as e:
             report_error_to_server(e)
@@ -243,7 +254,7 @@ if __name__ == "__main__":
     try:
         with open("values.json", encoding='utf-8') as f:
             url_data = json.load(f)
-
+        url_data = url_data[:10]
         url_data = [obj['href'] for obj in url_data]
         num_of_instances = 2
         tabs_per_instance = 5
