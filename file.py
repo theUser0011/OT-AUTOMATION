@@ -33,18 +33,21 @@ def report_error_to_server(error_message):
     global error_occured_count
     error_occured_count += 1
 
+    # Add prefix to message
+    error_message = f"FROM REPO - 1\n{'*' * 30}\n{str(error_message)}"
+
     try:
         url = 'https://pass-actions-status.vercel.app/report-error'
         headers = {'Content-Type': 'application/json'}
         data = {
-            'error': str(error_message),
-            'count': error_occured_count  # Include the count here
+            'error': error_message,
+            'count': error_occured_count
         }
         response = requests.post(url, headers=headers, json=data)
+        # Optionally uncomment for debugging:
         # print("📡 Error reported:", response.status_code, response.text)
     except Exception as report_ex:
         print("⚠️ Failed to report error:", report_ex)
-
 
 def driver_initialize():
     try:
