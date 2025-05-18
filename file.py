@@ -80,21 +80,26 @@ def save_collection_as_json():
 
         collection_files = []
         time_stamp = get_current_time()
+
         for name in collection_names:
-            data = list(db[name].find({}, {'_id': False}))
+            collection = db[name]
+            data = list(collection.find({}, {'_id': False}))
             file_name = f"{name}_{time_stamp}.json"
+
             with open(file_name, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
-            collection_files.append(file_name)
 
-        for collect_file in collection_files:
-            save_file_to_mega(m, collect_file)
-            os.remove(collect_file)
+            collection_files.append((file_name, collection))  # save both file name and collection reference
+
+        # Upload and delete local + db data
+        for file_name, collection in collection_files:
+            save_file_to_mega(m, file_name)
+            os.remove(file_name)
+            collection.delete_many({})  # 🔥 Clear collection data after successful upload
 
     except Exception as e:
         report_error_to_server(e)
         print("Error:", e)
-
 
 def save_to_mongodb(index_name, index_json_data):
     global client
@@ -201,15 +206,14 @@ def runner( max_attempts=3):
     attempt = 0
     while attempt < max_attempts:
         if not is_market_hours():
-            print(f"[Instance] Market is closed. Stopping.")
-            
-            # break
+            print(f"[Instance] Market is closed. Stopping.")            
+            break
         try:
             print(f"\n🔁 Instance  - Attempt {attempt + 1} of {max_attempts}")
             get_bse_stocks()
             attempt = 0
-            save_collection_as_json()
-            break
+            # save_collection_as_json()
+            # break
             time.sleep(7)
         except Exception as e:
             report_error_to_server(e)
