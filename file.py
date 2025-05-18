@@ -21,7 +21,7 @@ def report_error_to_server(error_message):
     error_occured_count += 1
 
     # Add prefix to message
-    error_message = f"FROM REPO - nse\n{'*' * 30}\n{str(error_message)}"
+    error_message = f"FROM REPO - 1\n{'*' * 30}\n{str(error_message)}"
 
     try:
         url = 'https://pass-actions-status.vercel.app/report-error'
@@ -59,7 +59,7 @@ def is_market_hours():
 def save_file_to_mega(m, file_name):
     try:
         m.upload(file_name)
-        print(f"Uploaded {file_name} to MEGA.")
+        # print(f"Uploaded {file_name} to MEGA.")
     except Exception as e:
         report_error_to_server(e)
         print("Error failed to upload:", e)
@@ -116,10 +116,45 @@ def save_to_mongodb(index_name, index_json_data):
         report_error_to_server(e)
         print(f"❌ MongoDB insertion failed for '{index_name}': {e}")
 
-def get_nse_stocks():
-    final_data = None
-    url = "https://ow-scanx-analytics.dhan.co/customscan/fetchdt"
 
+
+
+def fetch_page(page, url, headers):
+    payload = {
+        "data": {
+            "sort": "Mcap",
+            "sorder": "desc",
+            "count": 50,
+            "params": [
+                {"field": "OgInst", "op": "", "val": "ES"},
+                {"field": "Exch", "op": "", "val": "BSE"}
+            ],
+            "fields": [
+                "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue",
+                "Year1RevenueGrowth", "NetProfitMargin", "YoYLastQtrlyProfitGrowth",
+                "EBIDTAMargin", "volume", "PricePerchng1year", "PricePerchng3year",
+                "PricePerchng5year", "Ind_Pe", "Pb", "DivYeild", "Eps",
+                "DaySMA50CurrentCandle", "DaySMA200CurrentCandle", "DayRSI14CurrentCandle",
+                "ROCE", "Roe", "Sym", "PricePerchng1mon", "PricePerchng3mon"
+            ],
+            "pgno": page
+        }
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data['data']
+    except requests.RequestException as e:
+        print(f"Error fetching page {page}: {e}")
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error on page {page}: {e}")
+    return None
+
+
+def get_bse_stocks():
+    url = "https://ow-scanx-analytics.dhan.co/customscan/fetchdt"
     headers = {
         "accept": "*/*",
         "accept-language": "en-US,en;q=0.9,te;q=0.8,hi;q=0.7",
@@ -127,45 +162,34 @@ def get_nse_stocks():
         "content-type": "application/json; charset=UTF-8",
         "pragma": "no-cache",
         "priority": "u=1, i",
-        "sec-ch-ua": "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\"",
+        "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
         "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-ch-ua-platform": '"Windows"',
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
-        "referer": "https://dhan.co/"
+        "Referer": "https://dhan.co/",
+        "Referrer-Policy": "strict-origin-when-cross-origin"
     }
 
-    payload = {
-        "data": {
-            "sort": "Mcap",
-            "sorder": "desc",
-            "count": 2553,
-            "params": [
-                {"field": "OgInst", "op": "", "val": "ES"},
-                {"field": "Exch", "op": "", "val": "NSE"}
-            ],
-            "fields": [
-                "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue", "Year1RevenueGrowth",
-                "NetProfitMargin", "YoYLastQtrlyProfitGrowth", "EBIDTAMargin", "volume",
-                "PricePerchng1year", "PricePerchng3year", "PricePerchng5year", "Ind_Pe", "Pb",
-                "DivYeild", "Eps", "DaySMA50CurrentCandle", "DaySMA200CurrentCandle",
-                "DayRSI14CurrentCandle", "ROCE", "Roe", "Sym", "PricePerchng1mon", "PricePerchng3mon"
-            ],
-            "pgno": 1
-        }
-    }
+    total_pages = 87
+    final_data = []
 
-    response = requests.post(url, headers=headers, json=payload)
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        # Submit all tasks to executor
+        futures = {executor.submit(fetch_page, page, url, headers): page for page in range(1, total_pages + 1)}
 
-    if response.status_code==200:
-        final_data = response.json()
-    else:
-        msg = f"Failed to get responce : {response.status_code}"
-        report_error_to_server(msg)
+        for future in as_completed(futures):
+            page = futures[future]
+            result = future.result()
+            if result is not None:
+                final_data.extend(result)
+            if page+1%100 == 0:
+                
+                time.sleep(0.1)
 
 
-    print("All data fetched sucessfully.")
+    # print("All data fetched sucessfully.")
     try:
         mongo_data = {
             "timestamp":get_current_time(),
@@ -173,7 +197,6 @@ def get_nse_stocks():
         }
         save_to_mongodb('bse-stocks-data',mongo_data)
     except Exception as e:
-        report_error_to_server(e)
         print("Error failed to save : ",e)
     
     if is_after_3_35_pm:
@@ -186,8 +209,8 @@ def runner( max_attempts=3):
             print(f"[Instance] Market is closed. Stopping.")            
             break
         try:
-            print(f"\n🔁 Instance  - Attempt {attempt + 1} of {max_attempts}")
-            get_nse_stocks()
+            # print(f"\n🔁 Instance  - Attempt {attempt + 1} of {max_attempts}")
+            get_bse_stocks()
             attempt = 0
             # save_collection_as_json()
             # break
