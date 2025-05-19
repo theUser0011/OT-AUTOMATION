@@ -179,7 +179,7 @@ def get_bse_stocks():
             result = future.result()
             if result:
                 final_data.extend(result)
-                log(f"✅ Page {page} fetched with {len(result)} records.")
+                # log(f"✅ Page {page} fetched with {len(result)} records.")
             if (page + 1) % 100 == 0:
                 time.sleep(0.1)
 
