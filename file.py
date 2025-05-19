@@ -3,6 +3,8 @@ import json
 import pytz
 import os
 import requests
+import bson  # You can use pickle or zlib too, but bson is native to MongoDB
+from bson.binary import Binary
 
 from datetime import datetime, time as dtime
 from pymongo import MongoClient
@@ -156,7 +158,6 @@ def fetch_page(page, url, headers):
         log(f"❌ JSON decode error on page {page}: {e}", "ERROR")
     return None
 
-
 def get_bse_stocks():
     url = "https://ow-scanx-analytics.dhan.co/customscan/fetchdt"
     headers = {
@@ -179,19 +180,22 @@ def get_bse_stocks():
             result = future.result()
             if result:
                 final_data.extend(result)
-                # log(f"✅ Page {page} fetched with {len(result)} records.")
             if (page + 1) % 100 == 0:
                 time.sleep(0.1)
 
     try:
-        mongo_data = {"timestamp": get_current_time(), "data": final_data}
+        # Convert JSON data to BSON binary
+        binary_data = Binary(bson.BSON.encode({"data": final_data}))
+        mongo_data = {
+            "timestamp": get_current_time(),
+            "binary_data": binary_data
+        }
         save_to_mongodb('bse-stocks-data', mongo_data)
     except Exception as e:
         log("❌ Failed to save to MongoDB", "ERROR")
 
     if is_after_3_35_pm():
         save_collection_as_json()
-
 
 def runner(max_attempts=3):
     attempt = 0
