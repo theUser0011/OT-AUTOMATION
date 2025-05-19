@@ -1,68 +1,77 @@
-import time, json, pytz, os
+import time
+import json
+import pytz
+import os
+import requests
 
-from bs4 import BeautifulSoup
 from datetime import datetime, time as dtime
 from pymongo import MongoClient
-from concurrent.futures import ThreadPoolExecutor
-from mega import Mega
-import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from mega import Mega
 
+# ENV CONFIG
 MONGO_URL = os.getenv("MONGO_URL")
 M_TOKEN = os.getenv("M_TOKEN")
 
+# Validation
+if not MONGO_URL or not M_TOKEN:
+    print("❌ [INIT] MONGO_URL or M_TOKEN not set. Exiting.")
+    exit(1)
+
+# GLOBALS
 client = None
 os.makedirs("json", exist_ok=True)
-
 error_occured_count = 0
+
+
+def log(msg, level="INFO"):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(30*"-")
+    print(f"[{ts}] [{level}] {msg}")
+    print(30*"-")
+
 
 def report_error_to_server(error_message):
     global error_occured_count
     error_occured_count += 1
-
-    # Add prefix to message
-    error_message = f"FROM REPO - 1\n{'*' * 30}\n{str(error_message)}"
+    formatted_error = f"FROM REPO - 1\n{'*' * 30}\n{str(error_message)}"
 
     try:
-        url = 'https://pass-actions-status.vercel.app/report-error'
-        headers = {'Content-Type': 'application/json'}
-        data = {
-            'error': error_message,
-            'count': error_occured_count
-        }
-        response = requests.post(url, headers=headers, json=data)
-        # Optionally uncomment for debugging:
-        # print("📡 Error reported:", response.status_code, response.text)
+        response = requests.post(
+            'https://pass-actions-status.vercel.app/report-error',
+            headers={'Content-Type': 'application/json'},
+            json={'error': formatted_error, 'count': error_occured_count}
+        )
+        log(f"📡 Reported error #{error_occured_count}", "ERROR")
     except Exception as report_ex:
-        print("⚠️ Failed to report error:", report_ex)
+        log(f"⚠️ Failed to report error: {report_ex}", "ERROR")
 
 
 def get_current_time(default_value=0):
     ist = pytz.timezone('Asia/Kolkata')
-    if default_value == 1:
-        return datetime.now(ist)
-    return datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
+    now = datetime.now(ist)
+    return now if default_value == 1 else now.strftime('%Y-%m-%d %H:%M:%S')
 
 
 def is_after_3_35_pm():
-    now = get_current_time(default_value=1)
+    now = get_current_time(1)
     return now.time() > dtime(15, 35)
 
 
 def is_market_hours():
     now = get_current_time(1)
-    market_open = now.replace(hour=9, minute=15, second=0, microsecond=0)
-    market_close = now.replace(hour=16, minute=0, second=0, microsecond=0)
-    return now.weekday() < 6 and market_open <= now <= market_close
+    open_time = now.replace(hour=9, minute=15, second=0, microsecond=0)
+    close_time = now.replace(hour=16, minute=0, microsecond=0)
+    return now.weekday() < 5 and open_time <= now <= close_time
 
 
 def save_file_to_mega(m, file_name):
     try:
         m.upload(file_name)
-        # print(f"Uploaded {file_name} to MEGA.")
+        log(f"✅ Uploaded {file_name} to MEGA.")
     except Exception as e:
         report_error_to_server(e)
-        print("Error failed to upload:", e)
+        log(f"❌ Failed to upload {file_name} to MEGA: {e}", "ERROR")
 
 
 def save_collection_as_json():
@@ -72,34 +81,35 @@ def save_collection_as_json():
             client = MongoClient(MONGO_URL)
 
         db = client["OT_TRADING"]
-        collection_names = db.list_collection_names()
+        collections = db.list_collection_names()
 
         mega = Mega()
-        keys = M_TOKEN.split("_")
-        m = mega.login(keys[0], keys[1])
+        username, password = M_TOKEN.split("_")
+        m = mega.login(username, password)
 
         collection_files = []
-        time_stamp = get_current_time()
+        timestamp = get_current_time()
 
-        for name in collection_names:
+        for name in collections:
             collection = db[name]
             data = list(collection.find({}, {'_id': False}))
-            file_name = f"{name}_{time_stamp}.json"
+            file_name = f"{name}_{timestamp}.json"
 
             with open(file_name, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
 
-            collection_files.append((file_name, collection))  # save both file name and collection reference
+            collection_files.append((file_name, collection))
 
-        # Upload and delete local + db data
         for file_name, collection in collection_files:
             save_file_to_mega(m, file_name)
             os.remove(file_name)
-            collection.delete_many({})  # 🔥 Clear collection data after successful upload
+            collection.delete_many({})
+            log(f"🧹 Cleared collection '{collection.name}' after upload.")
 
     except Exception as e:
         report_error_to_server(e)
-        print("Error:", e)
+        log(f"❌ Error in saving collection as JSON: {e}", "ERROR")
+
 
 def save_to_mongodb(index_name, index_json_data):
     global client
@@ -110,25 +120,20 @@ def save_to_mongodb(index_name, index_json_data):
         collection = db[index_name]
         if index_json_data:
             collection.insert_one(index_json_data)
+            log(f"✅ Inserted data into MongoDB '{index_name}'")
         else:
-            print("⚠️ No data to insert.")
+            log("⚠️ No data to insert.")
     except Exception as e:
         report_error_to_server(e)
-        print(f"❌ MongoDB insertion failed for '{index_name}': {e}")
-
-
+        log(f"❌ MongoDB insertion failed for '{index_name}': {e}", "ERROR")
 
 
 def fetch_page(page, url, headers):
     payload = {
         "data": {
-            "sort": "Mcap",
-            "sorder": "desc",
-            "count": 50,
-            "params": [
-                {"field": "OgInst", "op": "", "val": "ES"},
-                {"field": "Exch", "op": "", "val": "BSE"}
-            ],
+            "sort": "Mcap", "sorder": "desc", "count": 50,
+            "params": [{"field": "OgInst", "op": "", "val": "ES"},
+                       {"field": "Exch", "op": "", "val": "BSE"}],
             "fields": [
                 "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue",
                 "Year1RevenueGrowth", "NetProfitMargin", "YoYLastQtrlyProfitGrowth",
@@ -144,12 +149,11 @@ def fetch_page(page, url, headers):
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=10)
         response.raise_for_status()
-        data = response.json()
-        return data['data']
+        return response.json().get('data')
     except requests.RequestException as e:
-        print(f"Error fetching page {page}: {e}")
+        log(f"❌ Error fetching page {page}: {e}", "ERROR")
     except json.JSONDecodeError as e:
-        print(f"JSON decode error on page {page}: {e}")
+        log(f"❌ JSON decode error on page {page}: {e}", "ERROR")
     return None
 
 
@@ -157,79 +161,62 @@ def get_bse_stocks():
     url = "https://ow-scanx-analytics.dhan.co/customscan/fetchdt"
     headers = {
         "accept": "*/*",
-        "accept-language": "en-US,en;q=0.9,te;q=0.8,hi;q=0.7",
-        "cache-control": "no-cache",
         "content-type": "application/json; charset=UTF-8",
-        "pragma": "no-cache",
-        "priority": "u=1, i",
-        "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"Windows"',
-        "sec-fetch-dest": "empty",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-site",
-        "Referer": "https://dhan.co/",
-        "Referrer-Policy": "strict-origin-when-cross-origin"
+        "Referer": "https://dhan.co/"
     }
 
     total_pages = 87
     final_data = []
 
     with ThreadPoolExecutor(max_workers=20) as executor:
-        # Submit all tasks to executor
-        futures = {executor.submit(fetch_page, page, url, headers): page for page in range(1, total_pages + 1)}
+        futures = {
+            executor.submit(fetch_page, page, url, headers): page
+            for page in range(1, total_pages + 1)
+        }
 
         for future in as_completed(futures):
             page = futures[future]
             result = future.result()
-            if result is not None:
+            if result:
                 final_data.extend(result)
-            if page+1%100 == 0:
-                
+                log(f"✅ Page {page} fetched with {len(result)} records.")
+            if (page + 1) % 100 == 0:
                 time.sleep(0.1)
 
-
-    # print("All data fetched sucessfully.")
     try:
-        mongo_data = {
-            "timestamp":get_current_time(),
-            "data":final_data
-        }
-        save_to_mongodb('bse-stocks-data',mongo_data)
+        mongo_data = {"timestamp": get_current_time(), "data": final_data}
+        save_to_mongodb('bse-stocks-data', mongo_data)
     except Exception as e:
-        print("Error failed to save : ",e)
-    
-    if is_after_3_35_pm:
+        log("❌ Failed to save to MongoDB", "ERROR")
+
+    if is_after_3_35_pm():
         save_collection_as_json()
 
-def runner( max_attempts=3):
+
+def runner(max_attempts=3):
     attempt = 0
     while attempt < max_attempts:
         if not is_market_hours():
-            print(f"[Instance] Market is closed. Stopping.")            
+            log("📴 Market is closed. Exiting runner.")
             break
         try:
-            # print(f"\n🔁 Instance  - Attempt {attempt + 1} of {max_attempts}")
+            log(f"🔁 Attempt {attempt + 1}/{max_attempts} started.")
             get_bse_stocks()
             attempt = 0
-            # save_collection_as_json()
-            # break
             time.sleep(7)
         except Exception as e:
             report_error_to_server(e)
             attempt += 1
             if attempt < max_attempts:
-                print(f"[Instance ] Retrying in 5 seconds due to error: {e}")
+                log(f"⏳ Retrying in 5s after error: {e}")
                 time.sleep(5)
             else:
-                print(f"[Instance ] ❌ All retry attempts failed.")
+                log("❌ All retry attempts failed. Exiting.", "ERROR")
 
 
 if __name__ == "__main__":
     try:
-
         runner()
-
     except Exception as e:
         report_error_to_server(e)
-        print("❌ Fatal error in main block:", e)
+        log(f"❌ Fatal error in main block: {e}", "ERROR")
