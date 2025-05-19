@@ -229,7 +229,7 @@ def runner(max_attempts=3):
             log(f"🔁 Attempt {attempt + 1}/{max_attempts} started.")
             get_bse_stocks()
             attempt = 0
-            time.sleep(15)
+            time.sleep(30)
         except Exception as e:
             report_error_to_server(e)
             attempt += 1
