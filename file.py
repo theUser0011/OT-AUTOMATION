@@ -31,10 +31,27 @@ def log(msg, level="INFO"):
     print(30*"-")
     
 def compress_json_to_binary(data: dict, level: int = 10) -> Binary:
+    data = sort_data(data['data'])
     json_bytes = json.dumps(data).encode('utf-8')
     compressor = zstd.ZstdCompressor(level=level)
     compressed = compressor.compress(json_bytes)
     return Binary(compressed)
+
+def sort_data(response_data):
+    sorted_data = []
+    for obj in response_data:
+        item = {
+            "id": obj.get("Sid"),
+            "name": obj.get("DispSym"),
+            "symbol": obj.get("Sym"),
+            "price": obj.get("Ltp"),
+            "volume": obj.get("Volume"),
+            "isin": obj.get("Isin"),
+            "exchange": obj.get("Exch"),
+            "seo_symbol": obj.get("Seosym")
+        }
+        sorted_data.append(item)
+    return sorted_data
 
 
 def report_error_to_server(error_message):
@@ -193,7 +210,7 @@ def get_bse_stocks():
             "timestamp": get_current_time(),
             "binary_data": compressed_binary,
             "compression": "zstd",
-            "compression_level": 10
+            "compression_level": 15
         }
         save_to_mongodb('bse-stocks-data', mongo_data)
     except Exception as e:
