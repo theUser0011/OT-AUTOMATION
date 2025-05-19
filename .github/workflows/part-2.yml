@@ -13,7 +13,7 @@ on:
 jobs:
   run-automation:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # Set timeout to 3 hours
+    timeout-minutes: 240  # Set timeout to 3 hours
     steps:
     - name: Checkout repo
       uses: actions/checkout@v3
@@ -25,8 +25,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt update
-        sudo apt install -y xvfb
+
         pip install undetected-chromedriver selenium mega.py bs4 requests pymongo pytz
         
     - name: Run Python script with virtual display
