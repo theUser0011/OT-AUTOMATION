@@ -60,7 +60,7 @@ def is_after_3_35_pm():
 
 def is_market_hours():
     now = get_current_time(1)
-    open_time = now.replace(hour=9, minute=15, second=0, microsecond=0)
+    open_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
     close_time = now.replace(hour=16, minute=0, microsecond=0)
     return now.weekday() < 5 and open_time <= now <= close_time
 
