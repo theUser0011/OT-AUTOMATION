@@ -1,15 +1,13 @@
-import time
-import json
-import pytz
-import os
-import requests
-import bson  # You can use pickle or zlib too, but bson is native to MongoDB
+import time,json,pytz,os,requests
+import zstandard as zstd
 from bson.binary import Binary
-
 from datetime import datetime, time as dtime
 from pymongo import MongoClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from mega import Mega
+
+
+
 
 # ENV CONFIG
 MONGO_URL = os.getenv("MONGO_URL")
@@ -31,6 +29,12 @@ def log(msg, level="INFO"):
     print(30*"-")
     print(f"[{ts}] [{level}] {msg}")
     print(30*"-")
+    
+def compress_json_to_binary(data: dict, level: int = 10) -> Binary:
+    json_bytes = json.dumps(data).encode('utf-8')
+    compressor = zstd.ZstdCompressor(level=level)
+    compressed = compressor.compress(json_bytes)
+    return Binary(compressed)
 
 
 def report_error_to_server(error_message):
@@ -184,11 +188,12 @@ def get_bse_stocks():
                 time.sleep(0.1)
 
     try:
-        # Convert JSON data to BSON binary
-        binary_data = Binary(bson.BSON.encode({"data": final_data}))
+        compressed_binary = compress_json_to_binary({"data": final_data})
         mongo_data = {
             "timestamp": get_current_time(),
-            "binary_data": binary_data
+            "binary_data": compressed_binary,
+            "compression": "zstd",
+            "compression_level": 10
         }
         save_to_mongodb('bse-stocks-data', mongo_data)
     except Exception as e:
@@ -207,7 +212,7 @@ def runner(max_attempts=3):
             log(f"🔁 Attempt {attempt + 1}/{max_attempts} started.")
             get_bse_stocks()
             attempt = 0
-            time.sleep(7)
+            time.sleep(15)
         except Exception as e:
             report_error_to_server(e)
             attempt += 1
