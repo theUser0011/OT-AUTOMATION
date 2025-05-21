@@ -1,13 +1,14 @@
 import requests
 import json
 import os
+import time
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
-# Get news from dhan.co
+# Get stock news from dhan.co
 def get_news(obj):
     stock_part = obj.get('Seosym')
     if not stock_part:
@@ -27,7 +28,7 @@ def get_news(obj):
         print(f"[Error] {stock_part} → {e}")
     return None
 
-# Save to MongoDB
+# Save the data to MongoDB
 def save_data_to_mongodb(data):
     MONGO_URL = os.getenv("MONGO_URL")
     client = MongoClient(MONGO_URL)
@@ -39,21 +40,22 @@ def save_data_to_mongodb(data):
     except Exception as e:
         print("❌ Error saving to MongoDB:", e)
 
+# Main task: scrape news and save
 def main():
     with open("values.json") as f:
         values = json.load(f)
 
     results = []
 
-    # Concurrent scraping
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    # Concurrent requests
+    with ThreadPoolExecutor(max_workers=20) as executor:
         future_to_stock = {executor.submit(get_news, obj): obj for obj in values}
         for future in as_completed(future_to_stock):
             result = future.result()
             if result and 'stock_news' in result:
                 results.append(result)
 
-    # Indian timestamp
+    # Timestamp
     india_time = datetime.now(pytz.timezone("Asia/Kolkata"))
     timestamp = india_time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -64,22 +66,26 @@ def main():
 
     save_data_to_mongodb(output)
 
-from datetime import datetime, time 
-import pytz
-import time
-
-def wait_until_918am_ist():
+# Wait until a specific IST time (e.g., 9:18 or 9:35)
+def wait_until_ist(hour, minute):
     india = pytz.timezone("Asia/Kolkata")
     now = datetime.now(india)
+    target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-    target = now.replace(hour=9, minute=18, second=0, microsecond=0)
+    if now >= target:
+        print(f"⏱️ Skipping wait — already past {hour}:{minute:02d} IST")
+        return
 
-    if now < target:
-        wait_seconds = (target - now).total_seconds()
-        print(f"⏳ Waiting {int(wait_seconds)} seconds until 9:18 AM IST...")
-        time.sleep(wait_seconds)
+    wait_seconds = (target - now).total_seconds()
+    print(f"⏳ Waiting {int(wait_seconds)} seconds until {hour}:{minute:02d} AM IST...")
+    time.sleep(wait_seconds)
 
+# Scheduler entry
 if __name__ == "__main__":
-    wait_until_918am_ist()
+    # First run at 9:18 AM IST
+    wait_until_ist(9, 18)
     main()
 
+    # Second run at 9:35 AM IST
+    wait_until_ist(9, 35)
+    main()
