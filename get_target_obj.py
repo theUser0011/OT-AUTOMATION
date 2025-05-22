@@ -48,16 +48,16 @@ def calculate_and_save(open_price, yesterday_high, yesterday_low):
             "Target (Profit)": buy_stopgain,
             "Stop Loss (Exit)": buy_stoploss,
             "Risk/Reward Ratio": buy_risk_reward,
-            "Risk ₹": buy_total_risk,
-            "Reward ₹": buy_total_reward
+            "Risk": buy_total_risk,
+            "Reward": buy_total_reward
         },
         "Put_Option (Sell)": {
             "Entry": sell_entry,
             "Target (Profit)": sell_stopgain,
             "Stop Loss (Exit)": sell_stoploss,
             "Risk/Reward Ratio": sell_risk_reward,
-            "Risk ₹": sell_total_risk,
-            "Reward ₹": sell_total_reward
+            "Risk": sell_total_risk,
+            "Reward": sell_total_reward
         },
         "Shares_count": int(shares_num),
         "capital_amount":CAPITAL
