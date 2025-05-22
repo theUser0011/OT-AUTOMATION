@@ -7,6 +7,7 @@ from pymongo import MongoClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 import pytz, re
+from get_target_obj import calculate_and_save
 
 def extract_prices(message):
     
@@ -39,6 +40,7 @@ def get_news(obj):
         return None
 
     url = f'https://dhan.co/stocks/{stock_part}-share-price/'
+
     
     try:
         res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
@@ -48,12 +50,28 @@ def get_news(obj):
             text = p.text
             if text and "Today" in text:
                 obj['stock_news'] = str(text)
-                obj['fetched_data'] = extract_prices(text)
+                fetched_data = extract_prices(text)
+                fetched_data = fetched_data if fetched_data != None else None
+                
+                obj['fetched_data'] = fetched_data
+                obj['target_data'] = None
+                
+                if fetched_data != None:
+                        
+                    open_price = fetched_data.get('open_price')
+                    yesterday_close = fetched_data.get('previous_close')
+                    yHigh = fetched_data.get('high_price')
+                    yLow = fetched_data.get('low_price')
+
+                    obj['target_data'] = calculate_and_save(open_price, yHigh, yLow)
+                    
                 obj['time'] = get_timestamp()
                 return obj
     except Exception as e:
         print(f"[Error] {stock_part} → {e}")
     return None
+
+
 
 
 # Save the data to MongoDB
@@ -70,7 +88,23 @@ def save_data_to_mongodb(data):
         
 import time
 
+# Wait until a specific IST time (e.g., 9:18 or 9:35)
+def wait_until_ist(hour, minute):
+    india = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(india)
+    target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+    if now >= target:
+        print(f"⏱️ Skipping wait — already past {hour}:{minute:02d} IST")
+        return
+
+    wait_seconds = (target - now).total_seconds()
+    print(f"⏳ Waiting {int(wait_seconds)} seconds until {hour}:{minute:02d} AM IST...")
+    time.sleep(wait_seconds)
+
 def main():
+    wait_until_ist(9, 32)
+    
     start_time = time.time()  # Start time
 
     with open("values.json") as f:
@@ -98,30 +132,6 @@ def main():
     save_data_to_mongodb(output)
 
 
-# Wait until a specific IST time (e.g., 9:18 or 9:35)
-def wait_until_ist(hour, minute):
-    india = pytz.timezone("Asia/Kolkata")
-    now = datetime.now(india)
-    target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-    if now >= target:
-        print(f"⏱️ Skipping wait — already past {hour}:{minute:02d} IST")
-        return
-
-    wait_seconds = (target - now).total_seconds()
-    print(f"⏳ Waiting {int(wait_seconds)} seconds until {hour}:{minute:02d} AM IST...")
-    time.sleep(wait_seconds)
-
-# Scheduler entry
-if __name__ == "__main__":
-
-    
-    # First run at 9:18 AM IST
-    # wait_until_ist(9, 18)
-    main()
-
-    # Second run at 9:35 AM IST
-    wait_until_ist(9, 35)
-    main()
+main()
 
 
