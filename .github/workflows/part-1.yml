@@ -34,4 +34,4 @@ jobs:
         M_TOKEN: ${{ secrets.M_TOKEN }}
 
       run: |
-        python test.py
+        python file.py
