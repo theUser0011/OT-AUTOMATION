@@ -6,7 +6,25 @@ from bs4 import BeautifulSoup
 from pymongo import MongoClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
-import pytz
+import pytz, re
+
+def extract_prices(message):
+    
+    # Use regex to find prices in the message
+
+    message = str(message)
+    open_price = re.search(r"opened at ([\d,]+\.\d+)", message)
+    previous_close = re.search(r"previous close was at ([\d,]+\.\d+)", message)
+    high_price = re.search(r"reached a high of ([\d,]+\.\d+)", message)
+    low_price = re.search(r"low of ([\d,]+\.\d+)", message)
+
+    return {
+        "open_price": float(open_price.group(1).replace(',', '')) if open_price else None,
+        "previous_close": float(previous_close.group(1).replace(',', '')) if previous_close else None,
+        "high_price": float(high_price.group(1).replace(',', '')) if high_price else None,
+        "low_price": float(low_price.group(1).replace(',', '')) if low_price else None,
+    }
+
 
 def get_timestamp():
     # Timestamp
@@ -30,6 +48,7 @@ def get_news(obj):
             text = p.text
             if text and "Today" in text:
                 obj['stock_news'] = str(text)
+                obj['fetched_data'] = extract_prices(text)
                 obj['time'] = get_timestamp()
                 return obj
     except Exception as e:
