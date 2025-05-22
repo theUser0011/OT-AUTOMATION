@@ -8,6 +8,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 import pytz
 
+def get_timestamp():
+    # Timestamp
+    india_time = datetime.now(pytz.timezone("Asia/Kolkata"))
+    timestamp = india_time.strftime("%Y-%m-%d %H:%M:%S")
+    return timestamp 
+
 # Get stock news from dhan.co
 def get_news(obj):
     stock_part = obj.get('Seosym')
@@ -23,10 +29,12 @@ def get_news(obj):
             text = p.text
             if text and "Today" in text:
                 obj['stock_news'] = str(text)
+                obj['time'] = get_timestamp()
                 return obj
     except Exception as e:
         print(f"[Error] {stock_part} → {e}")
     return None
+
 
 # Save the data to MongoDB
 def save_data_to_mongodb(data):
@@ -55,10 +63,8 @@ def main():
             if result and 'stock_news' in result:
                 results.append(result)
 
-    # Timestamp
-    india_time = datetime.now(pytz.timezone("Asia/Kolkata"))
-    timestamp = india_time.strftime("%Y-%m-%d %H:%M:%S")
-
+    timestamp = get_timestamp()
+    
     output = {
         "time-stamp": timestamp,
         "data": results
