@@ -21,6 +21,7 @@ def get_news(obj):
         return None
 
     url = f'https://dhan.co/stocks/{stock_part}-share-price/'
+    
     try:
         res = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         soup = BeautifulSoup(res.text, 'html.parser')
@@ -47,9 +48,12 @@ def save_data_to_mongodb(data):
         print("✅ Data saved to MongoDB")
     except Exception as e:
         print("❌ Error saving to MongoDB:", e)
+        
+import time
 
-# Main task: scrape news and save
 def main():
+    start_time = time.time()  # Start time
+
     with open("values.json") as f:
         values = json.load(f)
 
@@ -63,14 +67,17 @@ def main():
             if result and 'stock_news' in result:
                 results.append(result)
 
-    timestamp = get_timestamp()
-    
+    end_time = time.time()  # End time
+    total_time = round(end_time - start_time, 2)
+
     output = {
-        "time-stamp": timestamp,
+        "time-stamp": get_timestamp(),
+        "total_time": f"{total_time//60} ",
         "data": results
     }
 
     save_data_to_mongodb(output)
+
 
 # Wait until a specific IST time (e.g., 9:18 or 9:35)
 def wait_until_ist(hour, minute):
