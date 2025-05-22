@@ -56,7 +56,7 @@ def main():
     results = []
 
     # Concurrent requests
-    with ThreadPoolExecutor(max_workers=20) as executor:
+    with ThreadPoolExecutor(max_workers=40) as executor:
         future_to_stock = {executor.submit(get_news, obj): obj for obj in values}
         for future in as_completed(future_to_stock):
             result = future.result()
