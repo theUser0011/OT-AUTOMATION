@@ -20,9 +20,9 @@ def get_news(obj):
         soup = BeautifulSoup(res.text, 'html.parser')
         paragraphs = soup.find_all('p')
         for p in paragraphs:
-            text = p.get_text(strip=True)
-            if "Today" in text:
-                obj['stock_news'] = text
+            text = p.text
+            if text and "Today" in text:
+                obj['stock_news'] = str(text)
                 return obj
     except Exception as e:
         print(f"[Error] {stock_part} → {e}")
@@ -82,10 +82,14 @@ def wait_until_ist(hour, minute):
 
 # Scheduler entry
 if __name__ == "__main__":
+
+    
     # First run at 9:18 AM IST
-    wait_until_ist(9, 18)
+    # wait_until_ist(9, 18)
     main()
 
     # Second run at 9:35 AM IST
     wait_until_ist(9, 35)
     main()
+
+
