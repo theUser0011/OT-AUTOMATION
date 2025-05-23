@@ -188,11 +188,14 @@ def runner(max_attempts=3):
                 msg = f"Today Stock News fetched sucessfully : {len(stocks_target_data)}"
                 report_msg_to_server(msg)
                 
+
+            else:
+                
                 target_map = {item['Isin']: item for item in stocks_target_data}
                 merged_data = set_values_to_each_stock(live_data, stocks_target_data)
-            else:
+                                
                 # Compare new live_data with stored targets
-                for live_stock in live_data:
+                for live_stock in merged_data:
                     isin = live_stock.get('isin')
                     ltd = live_stock.get('price')
 
