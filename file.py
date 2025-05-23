@@ -31,7 +31,7 @@ def log(msg, level="INFO"):
 def send_trigger_alert(stock_obj):
     try:
         response = requests.post(
-            "https://pass-actions-status.vercel.app/report-trigger",
+            "https://pass-actions-status.vercel.app/report-error",
             headers={'Content-Type': 'application/json'},
             json=stock_obj
         )
