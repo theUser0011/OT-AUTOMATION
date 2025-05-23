@@ -8,6 +8,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 import pytz, re
 
+MONGO_URL = os.getenv("MONGO_URL")
+client = MongoClient(MONGO_URL)
+    
+db = client['OT_TRADING']
+coll = db['stock_news']
+
 def extract_prices(message):
     
     # Use regex to find prices in the message
@@ -58,22 +64,28 @@ def get_news(obj):
 
 # Save the data to MongoDB
 def save_data_to_mongodb(data):
-    MONGO_URL = os.getenv("MONGO_URL")
-    client = MongoClient(MONGO_URL)
-    db = client['OT_TRADING']
-    coll = db['stock_news']
+    if client == None:
+        
+        client = MongoClient(MONGO_URL)
+        db = client['OT_TRADING']
+        coll = db['stock_news']
     try:
         coll.insert_one(data)
         print("✅ Data saved to MongoDB")
     except Exception as e:
         print("❌ Error saving to MongoDB:", e)
         
-import time
+        
+def get_time(date_only=False):
+    india = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(india)
+    if date_only:
+        return now.date()  # returns a date object: YYYY-MM-DD
+    return now
 
 # Wait until a specific IST time (e.g., 9:18 or 9:35)
 def wait_until_ist(hour, minute):
-    india = pytz.timezone("Asia/Kolkata")
-    now = datetime.now(india)
+    now = get_time()
     target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     if now >= target:
@@ -83,36 +95,65 @@ def wait_until_ist(hour, minute):
     wait_seconds = (target - now).total_seconds()
     print(f"⏳ Waiting {int(wait_seconds)} seconds until {hour}:{minute:02d} AM IST...")
     time.sleep(wait_seconds)
+    
+def fetch_document_with_today_date(coll, date_field="date"):
+    today = get_time(date_only=True)
+    
+    # MongoDB date range for today's date (00:00:00 to 23:59:59)
+    start_of_day = datetime.combine(today, datetime.min.time()).replace(tzinfo=pytz.timezone("Asia/Kolkata"))
+    end_of_day = datetime.combine(today, datetime.max.time()).replace(tzinfo=pytz.timezone("Asia/Kolkata"))
+    
+    # Query documents where date_field is within today’s date range
+    query = {
+        date_field: {
+            "$gte": start_of_day,
+            "$lte": end_of_day
+        }
+    }
+    
+    document = coll.find_one(query)
+    return document
 
 def start_main():
-    wait_until_ist(9, 32)
     
-    start_time = time.time()  # Start time
+    doc = fetch_document_with_today_date(coll, date_field="date")
+    if doc:
+        print("Found document for today:", doc)
+        return doc['data']
+    else:
+        print("No document found for today.")
+        doc = None                
 
-    with open("values.json") as f:
-        values = json.load(f)
+    if doc == None:
+        
+        wait_until_ist(9, 32)        
+        start_time = time.time()  # Start time
+        
+        with open("values.json") as f:
+            values = json.load(f)
 
-    results = []
+        results = []
 
-    # Concurrent requests
-    with ThreadPoolExecutor(max_workers=40) as executor:
-        future_to_stock = {executor.submit(get_news, obj): obj for obj in values}
-        for future in as_completed(future_to_stock):
-            result = future.result()
-            if result and 'stock_news' in result:
-                results.append(result)
+        # Concurrent requests
+        with ThreadPoolExecutor(max_workers=40) as executor:
+            future_to_stock = {executor.submit(get_news, obj): obj for obj in values}
+            for future in as_completed(future_to_stock):
+                result = future.result()
+                if result and 'stock_news' in result:
+                    results.append(result)
 
-    end_time = time.time()  # End time
-    total_time = round(end_time - start_time, 2)
+            
+        end_time = time.time()  # End time
+        total_time = round(end_time - start_time, 2)
 
-    output = {
-        "time-stamp": get_timestamp(),
-        "total_time": f"{total_time//60} ",
-        "data": results
-    }
+        output = {
+            "time-stamp": get_timestamp(),
+            "total_time": f"{total_time//60} ",
+            "data": results
+        }
 
-    save_data_to_mongodb(output)
-    return output['data']
+        save_data_to_mongodb(output)
+        return output['data']
 
 # output = main()
 

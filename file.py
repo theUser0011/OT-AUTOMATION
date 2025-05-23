@@ -164,6 +164,7 @@ def set_values_to_each_stock(all_stock_values_lst, stocks_target_data):
 
     return final_data
 
+
 def runner(max_attempts=3):
     attempt = 0
     merged_data = None
