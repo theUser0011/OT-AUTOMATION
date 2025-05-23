@@ -165,6 +165,7 @@ def set_values_to_each_stock(all_stock_values_lst, stocks_target_data):
     return final_data
 
 def save_merged_data(data):
+    global client
     if client == None:
         client = MongoClient(MONGO_URL)
         
