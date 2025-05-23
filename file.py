@@ -128,7 +128,7 @@ def get_bse_stocks():
     total_pages = 87
     final_data = []
 
-    with ThreadPoolExecutor(max_workers=30) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {
             executor.submit(fetch_page, page, url, headers): page
             for page in range(1, total_pages + 1)
