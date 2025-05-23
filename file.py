@@ -164,7 +164,19 @@ def set_values_to_each_stock(all_stock_values_lst, stocks_target_data):
 
     return final_data
 
-
+def save_merged_data(data):
+    if client == None:
+        client = MongoClient(MONGO_URL)
+    else:
+        db = client['OT_TRADING']
+        coll = db['daily_target_data']        
+        now = get_current_time()
+        obj = {
+            "time-stamp":now,
+            "data":data
+        }
+        coll.insert_one(obj)
+        
 def runner(max_attempts=3):
     attempt = 0
     merged_data = None
@@ -222,9 +234,10 @@ def runner(max_attempts=3):
                     msg = f"e-6 Comparison error: {cmp_err}", "WARN"
                     report_msg_to_server(msg)
                     log(msg)
-                        
-            msg = f"Comparing Count : {count}"
-            report_msg_to_server(msg)
+            
+            if count % 1000 ==0:          
+                msg = f"Comparing Count : {count}"
+                report_msg_to_server(msg)
                 
             attempt = 0
 
