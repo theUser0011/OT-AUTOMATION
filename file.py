@@ -213,7 +213,7 @@ def runner(max_attempts=3):
                     if (put_target_val is not None and ltd > put_target_val) or \
                     (call_target_val is not None and ltd > call_target_val):
                         live_stock['single_target_flag'] = True
-                        send_trigger_alert(live_stock)
+                        report_msg_to_server(live_stock)
                 except Exception as cmp_err:
                     log(f"e-6 Comparison error: {cmp_err}", "WARN")
 
