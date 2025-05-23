@@ -4,7 +4,7 @@ from datetime import datetime, time as dtime
 from pymongo import MongoClient
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from mega import Mega
-from fetch_stock_target import main
+from fetch_stock_target import start_main
 
 
 # ENV CONFIG
@@ -182,7 +182,7 @@ def runner(max_attempts=3):
 
             # Fetch target data only once
             if merged_data is None:
-                stocks_target_data = fetch_stock_target()
+                stocks_target_data = start_main()
                 target_map = {item['Isin']: item for item in stocks_target_data}
                 merged_data = set_values_to_each_stock(live_data, stocks_target_data)
             else:

@@ -84,7 +84,7 @@ def wait_until_ist(hour, minute):
     print(f"⏳ Waiting {int(wait_seconds)} seconds until {hour}:{minute:02d} AM IST...")
     time.sleep(wait_seconds)
 
-def main():
+def start_main():
     wait_until_ist(9, 32)
     
     start_time = time.time()  # Start time
