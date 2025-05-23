@@ -1,4 +1,4 @@
-import time,json,pytz,os,requests
+import time,json,pytz,os,requests,traceback
 from bson.binary import Binary
 from datetime import datetime, time as dtime
 from pymongo import MongoClient
@@ -36,7 +36,7 @@ def send_trigger_alert(stock_obj):
             json=stock_obj
         )
     except Exception as ex:
-        log(f"❌ Failed to send trigger alert: {ex}", "ERROR")
+        log(f"e1 - ❌ Failed to send trigger alert: {ex}", "ERROR")
 
 
 def sort_data(response_data):
@@ -67,9 +67,9 @@ def report_error_to_server(error_message):
             headers={'Content-Type': 'application/json'},
             json={'error': formatted_error, 'count': error_occured_count}
         )
-        log(f"📡 Reported error #{error_occured_count}", "ERROR")
+        log(f"e-2 📡 Reported error #{error_occured_count}", "ERROR")
     except Exception as report_ex:
-        log(f"⚠️ Failed to report error: {report_ex}", "ERROR")
+        log(f"e-3 ⚠️ Failed to report error: {report_ex}", "ERROR")
 
 
 def get_current_time(default_value=0):
@@ -112,9 +112,9 @@ def fetch_page(page, url, headers):
         response.raise_for_status()
         return response.json().get('data')
     except requests.RequestException as e:
-        log(f"❌ Error fetching page {page}: {e}", "ERROR")
+        log(f"e-4 ❌ Error fetching page {page}: {e}", "ERROR")
     except json.JSONDecodeError as e:
-        log(f"❌ JSON decode error on page {page}: {e}", "ERROR")
+        log(f"e-5 ❌ JSON decode error on page {page}: {e}", "ERROR")
     return None
 
 def get_bse_stocks():
@@ -206,12 +206,13 @@ def runner(max_attempts=3):
                             live_stock['single_target_flag'] = True
                             send_trigger_alert(live_stock)
                     except Exception as cmp_err:
-                        log(f"Comparison error: {cmp_err}", "WARN")
+                        log(f"e-6 Comparison error: {cmp_err}", "WARN")
 
             attempt = 0
 
         except Exception as e:
-            report_error_to_server(e)
+            error_message = str(e) + "\n" + traceback.format_exc()
+            report_error_to_server(error_message)
             attempt += 1
             if attempt < max_attempts:
                 log(f"⏳ Retrying in 5s after error: {e}")
@@ -223,5 +224,6 @@ def runner(max_attempts=3):
 try:
     runner()
 except Exception as e:
-    report_error_to_server(e)
+    error_message = str(e) + "\n" + traceback.format_exc()
+    report_error_to_server(error_message)
     log(f"❌ Fatal error in main block: {e}", "ERROR")
