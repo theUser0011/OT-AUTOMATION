@@ -195,7 +195,7 @@ def runner(max_attempts=3):
             
             # Now do the comparison logic unconditionally after data is ready
             for live_stock in merged_data:
-                continue_flag = live_data.get("single_target_flag",None)
+                continue_flag = live_stock.get("single_target_flag",None)
                 if continue_flag == True:continue
                 isin = live_stock.get('isin')
                 ltd = live_stock.get('price')
