@@ -167,7 +167,7 @@ def set_values_to_each_stock(all_stock_values_lst, stocks_target_data):
 def save_merged_data(data):
     if client == None:
         client = MongoClient(MONGO_URL)
-    else:
+        
         db = client['OT_TRADING']
         coll = db['daily_target_data']        
         now = get_current_time()
@@ -202,7 +202,7 @@ def runner(max_attempts=3):
                 
                 target_map = {item['Isin']: item for item in stocks_target_data}
                 merged_data = set_values_to_each_stock(live_data, stocks_target_data)
-            
+                save_merged_data(merged_data)
             count +=1
             
             # Now do the comparison logic unconditionally after data is ready
