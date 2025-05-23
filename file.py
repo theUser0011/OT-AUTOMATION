@@ -185,36 +185,37 @@ def runner(max_attempts=3):
             if merged_data is None:
                 stocks_target_data = start_main()
                 
-                msg = f"Today Stock News fetched sucessfully : {len(stocks_target_data)}"
+                msg = f"Today Stock News fetched successfully: {len(stocks_target_data)}"
                 report_msg_to_server(msg)
-                
-
-            else:
                 
                 target_map = {item['Isin']: item for item in stocks_target_data}
                 merged_data = set_values_to_each_stock(live_data, stocks_target_data)
-                                
-                # Compare new live_data with stored targets
-                for live_stock in merged_data:
-                    isin = live_stock.get('isin')
-                    ltd = live_stock.get('price')
 
-                    if not ltd or not isin:
-                        continue
+            # Now do the comparison logic unconditionally after data is ready
+            for live_stock in merged_data:
+                isin = live_stock.get('isin')
+                ltd = live_stock.get('price')
 
-                    target = target_map.get(isin)
-                    if not target:
-                        continue
+                if not ltd or not isin:
+                    continue
 
-                    put_target = target.get('PutTarget')
-                    call_target = target.get('CallTarget')
+                target = target_map.get(isin)
+                if not target:
+                    continue
 
-                    try:
-                        if ltd > float(put_target) or ltd > float(call_target):
-                            live_stock['single_target_flag'] = True
-                            send_trigger_alert(live_stock)
-                    except Exception as cmp_err:
-                        log(f"e-6 Comparison error: {cmp_err}", "WARN")
+                put_target = target.get('PutTarget')
+                call_target = target.get('CallTarget')
+
+                try:
+                    put_target_val = float(put_target) if put_target is not None else None
+                    call_target_val = float(call_target) if call_target is not None else None
+
+                    if (put_target_val is not None and ltd > put_target_val) or \
+                    (call_target_val is not None and ltd > call_target_val):
+                        live_stock['single_target_flag'] = True
+                        send_trigger_alert(live_stock)
+                except Exception as cmp_err:
+                    log(f"e-6 Comparison error: {cmp_err}", "WARN")
 
             attempt = 0
 
