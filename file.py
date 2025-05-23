@@ -56,7 +56,7 @@ def sort_data(response_data):
     return sorted_data
 
 
-def report_error_to_server(error_message):
+def report_msg_to_server(error_message):
     global error_occured_count
     error_occured_count += 1
     formatted_error = f"FROM REPO - 1\n{'*' * 30}\n{str(error_message)}"
@@ -184,6 +184,10 @@ def runner(max_attempts=3):
             # Fetch target data only once
             if merged_data is None:
                 stocks_target_data = start_main()
+                
+                msg = f"Today Stock News fetched sucessfully : {len(stocks_target_data)}"
+                report_msg_to_server(msg)
+                
                 target_map = {item['Isin']: item for item in stocks_target_data}
                 merged_data = set_values_to_each_stock(live_data, stocks_target_data)
             else:
@@ -213,7 +217,7 @@ def runner(max_attempts=3):
 
         except Exception as e:
             error_message = str(e) + "\n" + traceback.format_exc()
-            report_error_to_server(error_message)
+            report_msg_to_server(error_message)
             attempt += 1
             if attempt < max_attempts:
                 log(f"⏳ Retrying in 5s after error: {e}")
@@ -226,5 +230,5 @@ try:
     runner()
 except Exception as e:
     error_message = str(e) + "\n" + traceback.format_exc()
-    report_error_to_server(error_message)
+    report_msg_to_server(error_message)
     log(f"❌ Fatal error in main block: {e}", "ERROR")

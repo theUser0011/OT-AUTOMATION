@@ -64,8 +64,8 @@ def get_news(obj):
 
 # Save the data to MongoDB
 def save_data_to_mongodb(data):
-    if client == None:
-        
+    global client, db, coll  # let Python use the global variables
+    if client is None:
         client = MongoClient(MONGO_URL)
         db = client['OT_TRADING']
         coll = db['stock_news']
@@ -74,7 +74,7 @@ def save_data_to_mongodb(data):
         print("✅ Data saved to MongoDB")
     except Exception as e:
         print("❌ Error saving to MongoDB:", e)
-        
+
         
 def get_time(date_only=False):
     india = pytz.timezone("Asia/Kolkata")
