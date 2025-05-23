@@ -1,5 +1,4 @@
 import time,json,pytz,os,requests
-import zstandard as zstd
 from bson.binary import Binary
 from datetime import datetime, time as dtime
 from pymongo import MongoClient
