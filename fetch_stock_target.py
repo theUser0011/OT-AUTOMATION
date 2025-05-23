@@ -8,7 +8,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 import pytz, re
 
-MONGO_URL = os.getenv("MONGO_URL")
+# MONGO_URL = os.getenv("MONGO_URL")
+MONGO_URL = 'mongodb+srv://afg154005:gnLhPlgHpuQaFjvh@cluster0.0yvn2uk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+
 client = MongoClient(MONGO_URL)
     
 db = client['OT_TRADING']
@@ -96,33 +98,33 @@ def wait_until_ist(hour, minute):
     print(f"⏳ Waiting {int(wait_seconds)} seconds until {hour}:{minute:02d} AM IST...")
     time.sleep(wait_seconds)
     
-def fetch_document_with_today_date(coll, date_field="date"):
+def fetch_document_with_today_date(coll):
     today = get_time(date_only=True)
-    
-    # MongoDB date range for today's date (00:00:00 to 23:59:59)
-    start_of_day = datetime.combine(today, datetime.min.time()).replace(tzinfo=pytz.timezone("Asia/Kolkata"))
-    end_of_day = datetime.combine(today, datetime.max.time()).replace(tzinfo=pytz.timezone("Asia/Kolkata"))
-    
-    # Query documents where date_field is within today’s date range
+    date_str = today.strftime("%Y-%m-%d")  # e.g., '2025-05-23'
+
     query = {
-        date_field: {
-            "$gte": start_of_day,
-            "$lte": end_of_day
+        "time-stamp": {
+            "$regex": f"^{date_str}"
         }
     }
-    
     document = coll.find_one(query)
     return document
 
+
 def start_main():
     
-    doc = fetch_document_with_today_date(coll, date_field="date")
+    doc = fetch_document_with_today_date(coll)
     if doc:
-        print("Found document for today:", doc)
+        # Remove _id field if present
+        doc.pop('_id', None)
+        
         return doc['data']
     else:
         print("No document found for today.")
-        doc = None                
+        doc = None
+
+    exit()
+
 
     if doc == None:
         
@@ -154,7 +156,4 @@ def start_main():
 
         save_data_to_mongodb(output)
         return output['data']
-
-# output = main()
-
 
