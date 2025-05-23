@@ -26,7 +26,8 @@ jobs:
     - name: Install dependencies
       run: |
 
-        pip install undetected-chromedriver selenium mega.py bs4 requests pymongo pytz
+        pip install undetected-chromedriver selenium mega.py bs4 requests pymongo pytz beautifulsoup4
+
         
     - name: Run Python script with virtual display
       env:
