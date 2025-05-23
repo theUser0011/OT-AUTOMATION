@@ -112,7 +112,7 @@ def start_main():
     }
 
     save_data_to_mongodb(output)
-    return output
+    return output['data']
 
 # output = main()
 
