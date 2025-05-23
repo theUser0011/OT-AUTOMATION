@@ -209,7 +209,6 @@ def runner(max_attempts=3):
                         log(f"Comparison error: {cmp_err}", "WARN")
 
             attempt = 0
-            time.sleep(30)  # Keep polling every 30 seconds
 
         except Exception as e:
             report_error_to_server(e)
