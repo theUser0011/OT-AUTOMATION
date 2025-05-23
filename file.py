@@ -170,7 +170,7 @@ def runner(max_attempts=3):
     merged_data = None
     stocks_target_data = None
     target_map = {}
-
+    count = 0
     while attempt < max_attempts:
         if not is_market_hours():
             log("📴 Market is closed. Exiting runner.")
@@ -182,7 +182,7 @@ def runner(max_attempts=3):
             live_data = sort_data(all_stocks_ltd)
 
             # Fetch target data only once
-            if merged_data is None:
+            if merged_data is None and count ==0:
                 stocks_target_data = start_main()
                 
                 msg = f"Today Stock News fetched successfully: {len(stocks_target_data)}"
@@ -190,9 +190,13 @@ def runner(max_attempts=3):
                 
                 target_map = {item['Isin']: item for item in stocks_target_data}
                 merged_data = set_values_to_each_stock(live_data, stocks_target_data)
-
+            
+            count +=1
+            
             # Now do the comparison logic unconditionally after data is ready
             for live_stock in merged_data:
+                continue_flag = live_data.get("single_target_flag",None)
+                if continue_flag == True:continue
                 isin = live_stock.get('isin')
                 ltd = live_stock.get('price')
 
@@ -215,8 +219,13 @@ def runner(max_attempts=3):
                         live_stock['single_target_flag'] = True
                         report_msg_to_server(live_stock)
                 except Exception as cmp_err:
-                    log(f"e-6 Comparison error: {cmp_err}", "WARN")
-
+                    msg = f"e-6 Comparison error: {cmp_err}", "WARN"
+                    report_msg_to_server(msg)
+                    log(msg)
+                        
+            msg = f"Comparing Count : {count}"
+            report_msg_to_server(msg)
+                
             attempt = 0
 
         except Exception as e:
